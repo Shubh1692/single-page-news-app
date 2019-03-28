@@ -10,28 +10,30 @@ class App extends Component {
       selectedCategory: 'business',
       selectedCountry: 'in',
       totalResults: 0,
-      pageNo: 1
+      page: 1
     }
   }
 
   async componentDidMount() {
     await this.getArticles({
       selectedCategory: this.state.selectedCategory,
-      selectedCountry: this.state.selectedCountry
+      selectedCountry: this.state.selectedCountry,
+      page: this.state.page
     });
   }
 
   async getArticles({
     selectedCategory,
-    selectedCountry
+    selectedCountry,
+    page
   }) {
-    const newsReq = await fetch(`https://newsapi.org/v2/top-headlines?apiKey=be77ffc5861e487383159056b09bbb96&country=${selectedCountry}&category=${selectedCategory}`, {
+    const newsReq = await fetch(`https://newsapi.org/v2/top-headlines?apiKey=be77ffc5861e487383159056b09bbb96&country=${selectedCountry}&category=${selectedCategory}&page=${page}&pageSize=10`, {
       method: 'GET',
     });
     const newsRes = await newsReq.json();
     const { articles = [], totalResults = 0 } = newsRes;
     await this.setState({
-      articles, totalResults, selectedCategory, selectedCountry
+      articles, totalResults, selectedCategory, selectedCountry, page
     });
   }
 
@@ -42,12 +44,25 @@ class App extends Component {
     await this.getArticles({
       [fieldName]: fieldValue,
       [fieldName === 'selectedCategory' ? 'selectedCountry' : 'selectedCategory']:
-        fieldName === 'selectedCategory' ? this.state.selectedCountry : this.state.selectedCategory
+        fieldName === 'selectedCategory' ? this.state.selectedCountry : this.state.selectedCategory,
+      page: this.state.page
     });
+  }
+
+  onPageChange({
+    page
+  }) {
+    console.log(page)
+    if (page > 0 && page <= Math.ceil(this.state.totalResults / 10))
+      this.getArticles({
+        selectedCategory: this.state.selectedCategory,
+        selectedCountry: this.state.selectedCountry,
+        page
+      })
   }
   render() {
     const { selectedCategory = '',
-      selectedCountry = '', articles = [] } = this.state;
+      selectedCountry = '', articles = [], totalResults = 1 } = this.state;
     const categories = [{
       label: 'Business',
       value: 'business'
@@ -83,7 +98,9 @@ class App extends Component {
       label: 'Australia',
       value: 'au'
     }]
-    console.log(selectedCategory, selectedCountry, articles)
+    console.log(selectedCategory, selectedCountry, articles);
+    const pages = new Array(Math.ceil(this.state.totalResults / 10)).fill({});
+    console.log(pages, totalResults)
     return (
       <div className="App">
         <h1>Category</h1>
@@ -114,27 +131,40 @@ class App extends Component {
               }}>{label}</button>
             ))
         }
-        <ul class="list-group">
+        <ul className="list-group">
           {
             articles.map(({
               title
             }) => (
-                <li key={title} class="list-group-item">{title}</li>
+                <li key={title} className="list-group-item">{title}</li>
               ))
           }
         </ul>
 
 
         <nav aria-label="Page navigation example">
-          <ul className="pagination justify-content-center">
-            <li className="page-item disabled">
-              <a className="page-link" href="#" tabindex="-1">Previous</a>
+          <ul className="pagination justify-content-end">
+            <li className={`page-item ${this.state.page > 1 ? '' : 'disabled'} `}>
+              <a className="page-link" href="/" onClick={(e) => {
+                e.preventDefault();
+                this.onPageChange({
+                  page: this.state.page - 1
+                })
+              }}>Previous</a>
             </li>
-            <li className="page-item"><a className="page-link" href="#">1</a></li>
-            <li className="page-item"><a className="page-link" href="#">2</a></li>
-            <li className="page-item"><a className="page-link" href="#">3</a></li>
-            <li className="page-item">
-              <a className="page-link" href="#">Next</a>
+            {pages.map((obj, index) => (<li key={index} className="page-item"><a className="page-link" href="/" onClick={(e) => {
+              e.preventDefault();
+              this.onPageChange({
+                page: index + 1
+              })
+            }}>{index + 1}</a></li>))}
+            <li className={`page-item ${this.state.page <= pages - 1 ? '' : 'disabled'} `}>
+              <a className="page-link" href="/" onClick={(e) => {
+                e.preventDefault();
+                this.onPageChange({
+                  page: this.state.page + 1
+                })
+              }}>Next</a>
             </li>
           </ul>
         </nav>
